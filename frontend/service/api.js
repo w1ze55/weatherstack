@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const WEATHERSTACK_API_KEY = 'adccd87ccae8317e8da901a70b9babd8';
+const WEATHERSTACK_API_KEY = '07743be09f8fc04c813776100d38fcb7';
 
 export const getWeatherByCity = async (city, period = 1) => {
   // Primeira tentativa: nome da cidade
