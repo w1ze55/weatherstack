@@ -1,6 +1,6 @@
 import axios from 'axios';
  
-const WEATHERSTACK_API_KEY = 'https://api.weatherstack.com/forecast?access_key=19426f6f8308c9';
+const WEATHERSTACK_API_KEY = '19426f6f8308c9';
 const WEATHERSTACK_BASE_URL = 'http://api.weatherstack.com/current';
  
 const weatherAPI = axios.create({
