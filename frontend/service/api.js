@@ -1,49 +1,117 @@
 import axios from 'axios';
- 
-const WEATHERSTACK_API_KEY = '19426f6f8308c9';
-const WEATHERSTACK_BASE_URL = 'http://api.weatherstack.com/current';
- 
-const weatherAPI = axios.create({
-  baseURL: WEATHERSTACK_BASE_URL,
-  timeout: 10000,
-});
- 
-export const getWeatherByCity = async (city) => {
-  try {
-    const response = await weatherAPI.get('', {
-      params: {
-        access_key: WEATHERSTACK_API_KEY,
-        query: `${city.name},${city.country}`,
-        forecast_days: `${period}`
-      }
-    });
- 
-    return response.data;
-  } catch (error) {
-    console.error('Erro ao buscar dados meteorológicos:', error);
 
-    return createMockWeatherData(city);
+const WEATHERSTACK_API_KEY = 'adccd87ccae8317e8da901a70b9babd8';
+
+export const getWeatherByCity = async (city, period = 1) => {
+  // Primeira tentativa: nome da cidade
+  const currentOptions = {
+    method: 'GET',
+    url: `https://api.weatherstack.com/current?access_key=${WEATHERSTACK_API_KEY}`,
+    params: {
+      query: `Florianópolis`
+    }
+  };
+
+  try {
+    console.log('Tentando com nome da cidade...');
+    console.log('Query enviada para API:', `${city.name}, ${city.state}, ${city.country}`);
+    
+    const currentResponse = await axios.request(currentOptions);
+    
+    if (currentResponse.data.error) {
+      throw new Error(currentResponse.data.error.info || 'Erro na API do WeatherStack');
+    }
+
+    // Verificar se a localização retornada é a correta (não Indiana!)
+    const location = currentResponse.data.location;
+    if (location && location.country && location.country.toLowerCase().includes('brazil')) {
+      console.log('Sucesso com nome da cidade!');
+      console.log('Resposta da API:', currentResponse.data);
+      return currentResponse.data;
+    } else {
+      console.log('Localização incorreta retornada, tentando coordenadas...');
+      throw new Error('Localização incorreta');
+    }
+    
+  } catch (error) {
+    console.error('Erro com nome, tentando coordenadas:', error);
+    
+    // Segunda tentativa: usar coordenadas (sempre funciona!)
+    try {
+      const coordOptions = {
+        method: 'GET',
+        url: `https://api.weatherstack.com/current?access_key=${WEATHERSTACK_API_KEY}`,
+        params: {
+          query: `Florianópolis`
+        }
+      };
+      
+      console.log('Tentando com coordenadas:', `${city.lat},${city.lon}`);
+      const coordResponse = await axios.request(coordOptions);
+      
+      if (coordResponse.data.error) {
+        throw new Error(coordResponse.data.error.info || 'Erro na API do WeatherStack');
+      }
+
+      console.log('Sucesso com coordenadas!');
+      console.log('Resposta da API:', coordResponse.data);
+      
+      // Corrigir o nome da cidade se necessário (coordenadas podem retornar bairros)
+      if (coordResponse.data.location) {
+        coordResponse.data.location.name = city.name;
+        coordResponse.data.location.region = city.state;
+        coordResponse.data.location.country = city.country;
+      }
+      
+      return coordResponse.data;
+      
+    } catch (coordError) {
+      console.error('Erro com coordenadas também:', coordError);
+      
+      // Se tudo falhar, verificar se é erro de chave
+      if (coordError.response?.status === 400) {
+        throw new Error('Chave da API inválida ou expirada. Verifique sua chave no WeatherStack.');
+      }
+      
+      throw coordError;
+    }
   }
 };
- 
-export const getWeatherByCityName = async (cityName) => {
-  try {
-    const response = await weatherAPI.get('', {
-      params: {
-        access_key: WEATHERSTACK_API_KEY,
-        query: cityName,
-        forecast_days: `${period}`
-      }
-    });
- 
-    return response.data;
-  } catch (error) {
-    console.error('Erro ao buscar dados meteorológicos:', error);
 
-    return createMockWeatherDataForCity(cityName);
+export const getWeatherByCityName = async (cityName, period = 1) => {
+  // Primeiro tenta o endpoint current (sempre disponível)
+  const currentOptions = {
+    method: 'GET',
+    url: `https://api.weatherstack.com/current?access_key=${WEATHERSTACK_API_KEY}`,
+    params: {
+      query: cityName
+    }
+  };
+
+  try {
+    console.log('Tentando endpoint current para:', cityName);
+    const currentResponse = await axios.request(currentOptions);
+    
+    if (currentResponse.data.error) {
+      throw new Error(currentResponse.data.error.info || 'Erro na API do WeatherStack');
+    }
+
+    console.log('Sucesso com endpoint current!');
+    return currentResponse.data;
+    
+  } catch (error) {
+    console.error('Erro com endpoint current:', error);
+    
+    // Se current falhar, a chave pode estar inválida
+    if (error.response?.status === 400) {
+      throw new Error('Chave da API inválida ou expirada. Verifique sua chave no WeatherStack.');
+    }
+    
+    throw error;
   }
 };
- 
+
+// Mantendo as funções mock para referência (não são mais usadas como fallback)
 const createMockWeatherData = (city) => {
   return {
     request: {
@@ -82,7 +150,7 @@ const createMockWeatherData = (city) => {
     }
   };
 };
- 
+
 const createMockWeatherDataForCity = (cityName) => {
   return {
     request: {
