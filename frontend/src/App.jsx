@@ -1,18 +1,17 @@
 import { useState, useEffect } from 'react'
 import { cities, searchCities, getCityById } from '../data/cities'
-import { getWeatherByCity } from '../services/weatherService'
+import { getWeatherByCity } from '../service/api'
 import './App.css'
 
 function App() {
   const [filteredCities, setFilteredCities] = useState([])
   const [selectedCityId, setSelectedCityId] = useState('')
-  const [selectedPeriod, setSelectedPeriod] = useState(1) // Período padrão: 1 dia
+  const [selectedPeriod, setSelectedPeriod] = useState(1)
   const [weatherData, setWeatherData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [error, setError] = useState(null)
 
-  // Opções de período (1 a 7 dias)
   const periodOptions = [
     { value: 1, label: '1 dia' },
     { value: 2, label: '2 dias' },
@@ -23,7 +22,6 @@ function App() {
     { value: 7, label: '7 dias' }
   ]
 
-  // Carregar todas as cidades quando o componente montar
   useEffect(() => {
     setFilteredCities(cities)
   }, [])
@@ -34,7 +32,6 @@ function App() {
     const filtered = searchCities(value)
     setFilteredCities(filtered)
     
-    // Limpar seleção se a cidade selecionada não estiver nos resultados filtrados
     if (selectedCityId && !filtered.find(city => city.id === parseInt(selectedCityId))) {
       setSelectedCityId('')
     }
@@ -56,10 +53,8 @@ function App() {
     setError(null)
     
     try {
-      // Passar tanto a cidade quanto o período para o serviço
       const data = await getWeatherByCity(selectedCity, selectedPeriod)
       
-      // Verificar se a API retornou erro
       if (data.error) {
         throw new Error(data.error.info || 'Erro na API do Weatherstack')
       }
@@ -90,8 +85,8 @@ function App() {
           <input
             type="text"
             placeholder='Digite o nome da cidade...'
-            value={city}
-            onChange={handleCityChange}
+            value={searchTerm}
+            onChange={handleSearchChange}
             className='search-input'
           />
         </div>
@@ -99,8 +94,8 @@ function App() {
         <div className="select-section">
           <h3>Cidade</h3>
           <select
-            value={selectedCity}
-            onChange={(e) => setSelectedCity(e.target.value)}
+            value={selectedCityId}
+            onChange={(e) => setSelectedCityId(e.target.value)}
             className='city-select'
           >
             <option value="">Selecione uma cidade</option>
@@ -130,7 +125,7 @@ function App() {
         <div className="button-section">
           <button
             onClick={getWeather}
-            disabled={loading || !selectedCity}
+            disabled={loading || !selectedCityId}
             className='weather-btn primary'
           >
             {loading ? 'Buscando...' : 'Buscar'}

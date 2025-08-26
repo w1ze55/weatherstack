@@ -15,7 +15,7 @@ export const getWeatherByCity = async (city) => {
       params: {
         access_key: WEATHERSTACK_API_KEY,
         query: `${city.name},${city.country}`,
-        units: 'm' // métrico
+        forecast_days: `${period}`
       }
     });
  
