@@ -14,6 +14,10 @@ function App() {
   const [fromSearchTerm, setFromSearchTerm] = useState('')
   const [toSearchTerm, setToSearchTerm] = useState('')
   const [error, setError] = useState(null)
+  const [showFromSuggestions, setShowFromSuggestions] = useState(false)
+  const [showToSuggestions, setShowToSuggestions] = useState(false)
+  const [selectedFromSuggestion, setSelectedFromSuggestion] = useState(-1)
+  const [selectedToSuggestion, setSelectedToSuggestion] = useState(-1)
 
   useEffect(() => {
     setFilteredFromCurrencies(currencies)
@@ -25,6 +29,8 @@ function App() {
     setFromSearchTerm(value)
     const filtered = searchCurrencies(value)
     setFilteredFromCurrencies(filtered)
+    setShowFromSuggestions(value.length > 0 && filtered.length > 0)
+    setSelectedFromSuggestion(-1)
     
     if (selectedFromCurrencyId && !filtered.find(currency => currency.id === parseInt(selectedFromCurrencyId))) {
       setSelectedFromCurrencyId('')
@@ -36,6 +42,8 @@ function App() {
     setToSearchTerm(value)
     const filtered = searchCurrencies(value)
     setFilteredToCurrencies(filtered)
+    setShowToSuggestions(value.length > 0 && filtered.length > 0)
+    setSelectedToSuggestion(-1)
     
     if (selectedToCurrencyId && !filtered.find(currency => currency.id === parseInt(selectedToCurrencyId))) {
       setSelectedToCurrencyId('')
@@ -112,6 +120,74 @@ function App() {
     setFilteredFromCurrencies(currencies)
     setFilteredToCurrencies(currencies)
   }
+
+  const selectFromSuggestion = (currency) => {
+    setSelectedFromCurrencyId(currency.id.toString())
+    setFromSearchTerm(`${currency.flag} ${currency.code} - ${currency.name}`)
+    setShowFromSuggestions(false)
+    setSelectedFromSuggestion(-1)
+  }
+
+  const selectToSuggestion = (currency) => {
+    setSelectedToCurrencyId(currency.id.toString())
+    setToSearchTerm(`${currency.flag} ${currency.code} - ${currency.name}`)
+    setShowToSuggestions(false)
+    setSelectedToSuggestion(-1)
+  }
+
+  const handleFromKeyDown = (e) => {
+    if (!showFromSuggestions) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setSelectedFromSuggestion(prev => 
+          prev < filteredFromCurrencies.length - 1 ? prev + 1 : prev
+        )
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setSelectedFromSuggestion(prev => prev > 0 ? prev - 1 : -1)
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (selectedFromSuggestion >= 0) {
+          selectFromSuggestion(filteredFromCurrencies[selectedFromSuggestion])
+        }
+        break
+      case 'Escape':
+        setShowFromSuggestions(false)
+        setSelectedFromSuggestion(-1)
+        break
+    }
+  }
+
+  const handleToKeyDown = (e) => {
+    if (!showToSuggestions) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setSelectedToSuggestion(prev => 
+          prev < filteredToCurrencies.length - 1 ? prev + 1 : prev
+        )
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setSelectedToSuggestion(prev => prev > 0 ? prev - 1 : -1)
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (selectedToSuggestion >= 0) {
+          selectToSuggestion(filteredToCurrencies[selectedToSuggestion])
+        }
+        break
+      case 'Escape':
+        setShowToSuggestions(false)
+        setSelectedToSuggestion(-1)
+        break
+    }
+  }
   return (
     <div className="container">
       <h1>Conversor de Moedas</h1>
@@ -133,26 +209,34 @@ function App() {
           <div className="currency-section from-currency">
             <h3>Moeda de Origem</h3>
             <div className="search-section">
-              <input
-                type="text"
-                placeholder="Buscar moeda..."
-                value={fromSearchTerm}
-                onChange={handleFromSearchChange}
-                className="search-input"
-              />
+              <div className="search-container">
+                <input
+                  type="text"
+                  placeholder="Buscar moeda..."
+                  value={fromSearchTerm}
+                  onChange={handleFromSearchChange}
+                  onKeyDown={handleFromKeyDown}
+                  onFocus={() => fromSearchTerm && setShowFromSuggestions(filteredFromCurrencies.length > 0)}
+                  onBlur={() => setTimeout(() => setShowFromSuggestions(false), 200)}
+                  className="search-input"
+                />
+                {showFromSuggestions && (
+                  <div className="suggestions-dropdown">
+                    {filteredFromCurrencies.slice(0, 8).map((currency, index) => (
+                      <div
+                        key={currency.id}
+                        className={`suggestion-item ${index === selectedFromSuggestion ? 'selected' : ''}`}
+                        onClick={() => selectFromSuggestion(currency)}
+                      >
+                        <span className="currency-flag">{currency.flag}</span>
+                        <span className="currency-code">{currency.code}</span>
+                        <span className="currency-name">{currency.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <select
-              value={selectedFromCurrencyId}
-              onChange={(e) => setSelectedFromCurrencyId(e.target.value)}
-              className="currency-select"
-            >
-              <option value="">Selecione a moeda de origem</option>
-              {filteredFromCurrencies.map((currency) => (
-                <option key={currency.id} value={currency.id}>
-                  {currency.flag} {currency.code} - {currency.name}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="swap-section">
@@ -169,26 +253,34 @@ function App() {
           <div className="currency-section to-currency">
             <h3>Moeda de Destino</h3>
             <div className="search-section">
-              <input
-                type="text"
-                placeholder="Buscar moeda..."
-                value={toSearchTerm}
-                onChange={handleToSearchChange}
-                className="search-input"
-              />
+              <div className="search-container">
+                <input
+                  type="text"
+                  placeholder="Buscar moeda..."
+                  value={toSearchTerm}
+                  onChange={handleToSearchChange}
+                  onKeyDown={handleToKeyDown}
+                  onFocus={() => toSearchTerm && setShowToSuggestions(filteredToCurrencies.length > 0)}
+                  onBlur={() => setTimeout(() => setShowToSuggestions(false), 200)}
+                  className="search-input"
+                />
+                {showToSuggestions && (
+                  <div className="suggestions-dropdown">
+                    {filteredToCurrencies.slice(0, 8).map((currency, index) => (
+                      <div
+                        key={currency.id}
+                        className={`suggestion-item ${index === selectedToSuggestion ? 'selected' : ''}`}
+                        onClick={() => selectToSuggestion(currency)}
+                      >
+                        <span className="currency-flag">{currency.flag}</span>
+                        <span className="currency-code">{currency.code}</span>
+                        <span className="currency-name">{currency.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <select
-              value={selectedToCurrencyId}
-              onChange={(e) => setSelectedToCurrencyId(e.target.value)}
-              className="currency-select"
-            >
-              <option value="">Selecione a moeda de destino</option>
-              {filteredToCurrencies.map((currency) => (
-                <option key={currency.id} value={currency.id}>
-                  {currency.flag} {currency.code} - {currency.name}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
 
@@ -220,7 +312,7 @@ function App() {
 
       {exchangeData && !error && (
         <div className="exchange-result">
-          <h2>💱 Resultado da Conversão</h2>
+          <h2>Resultado da Conversão</h2>
           
           <div className="conversion-main">
             <div className="conversion-display">
@@ -235,7 +327,7 @@ function App() {
               </div>
               
               <div className="conversion-arrow">
-                ➡️
+                →
               </div>
               
               <div className="to-amount">
@@ -301,17 +393,6 @@ function App() {
           </div>
         </div>
       )}
-
-      <div className="info-section">
-        <h4>ℹ️ Informações</h4>
-        <p>
-          Este aplicativo utiliza a <strong>ExchangeRate API</strong> para obter cotações de moedas em tempo real.
-          {currencies.length} moedas disponíveis para conversão.
-        </p>
-        <p>
-          As cotações são atualizadas regularmente e podem variar conforme o mercado financeiro.
-        </p>
-      </div>
     </div>
   )
 }
