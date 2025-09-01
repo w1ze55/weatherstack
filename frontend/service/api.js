@@ -1,191 +1,159 @@
 import axios from 'axios';
-
-const WEATHERSTACK_API_KEY = '07743be09f8fc04c813776100d38fcb7';
-
-export const getWeatherByCity = async (city, period = 1) => {
-  // Primeira tentativa: nome da cidade
-  const currentOptions = {
-    method: 'GET',
-    url: `https://api.weatherstack.com/current?access_key=${WEATHERSTACK_API_KEY}`,
-    params: {
-      query: `Florianópolis`
-    }
-  };
-
+ 
+const EXCHANGE_API_KEY = 'baf452609858215d255d234df5659ab4';
+ 
+export const getExchangeRate = async (fromCurrency, toCurrency, amount = 1) => {
   try {
-    console.log('Tentando com nome da cidade...');
-    console.log('Query enviada para API:', `${city.name}, ${city.state}, ${city.country}`);
-    
-    const currentResponse = await axios.request(currentOptions);
-    
-    if (currentResponse.data.error) {
-      throw new Error(currentResponse.data.error.info || 'Erro na API do WeatherStack');
-    }
-
-    // Verificar se a localização retornada é a correta (não Indiana!)
-    const location = currentResponse.data.location;
-    if (location && location.country && location.country.toLowerCase().includes('brazil')) {
-      console.log('Sucesso com nome da cidade!');
-      console.log('Resposta da API:', currentResponse.data);
-      return currentResponse.data;
-    } else {
-      console.log('Localização incorreta retornada, tentando coordenadas...');
-      throw new Error('Localização incorreta');
-    }
-    
-  } catch (error) {
-    console.error('Erro com nome, tentando coordenadas:', error);
-    
-    // Segunda tentativa: usar coordenadas (sempre funciona!)
+    console.log(`Buscando cotação de ${fromCurrency} para ${toCurrency}...`);
+ 
+    let response;
     try {
-      const coordOptions = {
-        method: 'GET',
-        url: `https://api.weatherstack.com/current?access_key=${WEATHERSTACK_API_KEY}`,
-        params: {
-          query: `Florianópolis`
+      response = await axios.get(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
+     
+      if (response.data && response.data.rates) {
+        const rates = response.data.rates;
+       
+        if (!rates[toCurrency]) {
+          throw new Error(`Moeda de destino ${toCurrency} não encontrada`);
         }
-      };
-      
-      console.log('Tentando com coordenadas:', `${city.lat},${city.lon}`);
-      const coordResponse = await axios.request(coordOptions);
-      
-      if (coordResponse.data.error) {
-        throw new Error(coordResponse.data.error.info || 'Erro na API do WeatherStack');
+ 
+        const exchangeRate = rates[toCurrency];
+        const convertedAmount = amount * exchangeRate;
+ 
+        console.log('Cotação obtida com sucesso (API gratuita)!');
+       
+        return {
+          success: true,
+          base: fromCurrency,
+          target: toCurrency,
+          rate: exchangeRate,
+          amount: amount,
+          convertedAmount: convertedAmount,
+          lastUpdate: response.data.date || new Date().toISOString().split('T')[0],
+          timestamp: new Date().toISOString()
+        };
       }
-
-      console.log('Sucesso com coordenadas!');
-      console.log('Resposta da API:', coordResponse.data);
-      
-      // Corrigir o nome da cidade se necessário (coordenadas podem retornar bairros)
-      if (coordResponse.data.location) {
-        coordResponse.data.location.name = city.name;
-        coordResponse.data.location.region = city.state;
-        coordResponse.data.location.country = city.country;
+    } catch (freeApiError) {
+      console.log('API gratuita falhou, tentando com sua chave...', freeApiError.message);
+     
+      try {
+        response = await axios.get(`https://v6.exchangerate-api.com/v6/${EXCHANGE_API_KEY}/latest/${fromCurrency}`);
+       
+        if (response.data && response.data.result === 'success') {
+          const rates = response.data.conversion_rates;
+         
+          if (!rates[toCurrency]) {
+            throw new Error(`Moeda de destino ${toCurrency} não encontrada`);
+          }
+ 
+          const exchangeRate = rates[toCurrency];
+          const convertedAmount = amount * exchangeRate;
+ 
+          console.log('Cotação obtida com sucesso (API com chave)!');
+         
+          return {
+            success: true,
+            base: fromCurrency,
+            target: toCurrency,
+            rate: exchangeRate,
+            amount: amount,
+            convertedAmount: convertedAmount,
+            lastUpdate: response.data.time_last_update_utc,
+            timestamp: new Date().toISOString()
+          };
+        }
+      } catch (keyApiError) {
+        console.log('API com chave também falhou, tentando alternativa...', keyApiError.message);
+       
+        // Terceira tentativa: API alternativa
+        response = await axios.get(`https://api.fixer.io/latest?access_key=${EXCHANGE_API_KEY}&base=${fromCurrency}&symbols=${toCurrency}`);
+       
+        if (response.data && response.data.success) {
+          const rates = response.data.rates;
+         
+          if (!rates[toCurrency]) {
+            throw new Error(`Moeda de destino ${toCurrency} não encontrada`);
+          }
+ 
+          const exchangeRate = rates[toCurrency];
+          const convertedAmount = amount * exchangeRate;
+ 
+          console.log('Cotação obtida com sucesso (Fixer API)!');
+         
+          return {
+            success: true,
+            base: fromCurrency,
+            target: toCurrency,
+            rate: exchangeRate,
+            amount: amount,
+            convertedAmount: convertedAmount,
+            lastUpdate: response.data.date,
+            timestamp: new Date().toISOString()
+          };
+        }
       }
-      
-      return coordResponse.data;
-      
-    } catch (coordError) {
-      console.error('Erro com coordenadas também:', coordError);
-      
-      // Se tudo falhar, verificar se é erro de chave
-      if (coordError.response?.status === 400) {
-        throw new Error('Chave da API inválida ou expirada. Verifique sua chave no WeatherStack.');
-      }
-      
-      throw coordError;
     }
-  }
-};
-
-export const getWeatherByCityName = async (cityName, period = 1) => {
-  // Primeiro tenta o endpoint current (sempre disponível)
-  const currentOptions = {
-    method: 'GET',
-    url: `https://api.weatherstack.com/current?access_key=${WEATHERSTACK_API_KEY}`,
-    params: {
-      query: cityName
-    }
-  };
-
-  try {
-    console.log('Tentando endpoint current para:', cityName);
-    const currentResponse = await axios.request(currentOptions);
-    
-    if (currentResponse.data.error) {
-      throw new Error(currentResponse.data.error.info || 'Erro na API do WeatherStack');
-    }
-
-    console.log('Sucesso com endpoint current!');
-    return currentResponse.data;
-    
+   
+    throw new Error('Todas as APIs falharam');
+ 
   } catch (error) {
-    console.error('Erro com endpoint current:', error);
-    
-    // Se current falhar, a chave pode estar inválida
-    if (error.response?.status === 400) {
-      throw new Error('Chave da API inválida ou expirada. Verifique sua chave no WeatherStack.');
+    console.error('Erro ao buscar cotação:', error);
+   
+    if (error.response?.status === 404) {
+      throw new Error(`Moeda de origem ${fromCurrency} não encontrada`);
     }
-    
-    throw error;
+   
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      throw new Error('Chave da API inválida, expirada ou sem permissão. Usando dados de exemplo.');
+    }
+   
+    if (error.response?.status >= 500) {
+      throw new Error('Serviço de cotação temporariamente indisponível. Tente novamente em alguns minutos.');
+    }
+   
+    return {
+      success: true,
+      base: fromCurrency,
+      target: toCurrency,
+      rate: mockRate,
+      amount: amount,
+      convertedAmount: amount * mockRate,
+      lastUpdate: new Date().toISOString().split('T')[0],
+      timestamp: new Date().toISOString(),
+      isMock: true
+    };
   }
 };
-
-// Mantendo as funções mock para referência (não são mais usadas como fallback)
-const createMockWeatherData = (city) => {
-  return {
-    request: {
-      type: "City",
-      query: `${city.name}, ${city.country}`,
-      language: "en",
-      unit: "m"
-    },
-    location: {
-      name: city.name,
-      country: city.country,
-      region: city.state,
-      lat: city.lat.toString(),
-      lon: city.lon.toString(),
-      timezone_id: "America/Sao_Paulo",
-      localtime: new Date().toLocaleString('pt-BR'),
-      localtime_epoch: Math.floor(Date.now() / 1000),
-      utc_offset: "-3.0"
-    },
-    current: {
-      observation_time: new Date().toLocaleTimeString('en-US', { hour12: false }),
-      temperature: Math.floor(Math.random() * 15) + 20,
-      weather_code: 116,
-      weather_icons: ["https://assets.weatherstack.com/images/wsymbols01_png_64/wsymbol_0002_sunny_intervals.png"],
-      weather_descriptions: ["Parcialmente nublado"],
-      wind_speed: Math.floor(Math.random() * 20) + 5,
-      wind_degree: Math.floor(Math.random() * 360),
-      wind_dir: "NE",
-      pressure: Math.floor(Math.random() * 50) + 1000,
-      humidity: Math.floor(Math.random() * 40) + 40,
-      cloudcover: Math.floor(Math.random() * 100),
-      feelslike: Math.floor(Math.random() * 15) + 22,
-      uv_index: Math.floor(Math.random() * 11),
-      visibility: Math.floor(Math.random() * 10) + 10,
-      is_day: "yes"
+ 
+export const getSupportedCurrencies = async () => {
+  try {
+    const response = await axios.get('https://api.exchangerate-api.com/v4/latest/USD');
+   
+    if (response.data && response.data.rates) {
+      const currencies = Object.keys(response.data.rates);
+      currencies.push('USD');
+      return currencies.sort();
     }
-  };
+ 
+  } catch (error) {
+    console.error('Erro ao buscar moedas suportadas:', error);
+  }
+  return [
+    'AED', 'ARS', 'AUD', 'BGN', 'BRL', 'BSD', 'CAD', 'CHF', 'CLP', 'CNY',
+    'COP', 'CZK', 'DKK', 'DOP', 'EGP', 'EUR', 'FJD', 'GBP', 'GTQ', 'HKD',
+    'HRK', 'HUF', 'IDR', 'ILS', 'INR', 'ISK', 'JPY', 'KRW', 'KZT', 'MXN',
+    'MYR', 'NOK', 'NZD', 'PAB', 'PEN', 'PHP', 'PKR', 'PLN', 'PYG', 'RON',
+    'RUB', 'SAR', 'SEK', 'SGD', 'THB', 'TRY', 'TWD', 'UAH', 'USD', 'UYU',
+    'VND', 'ZAR'
+  ];
 };
-
-const createMockWeatherDataForCity = (cityName) => {
-  return {
-    request: {
-      type: "City",
-      query: cityName,
-      language: "en",
-      unit: "m"
-    },
-    location: {
-      name: cityName,
-      country: "Unknown",
-      region: "Unknown",
-      lat: "0",
-      lon: "0",
-      timezone_id: "UTC",
-      localtime: new Date().toLocaleString('pt-BR'),
-      localtime_epoch: Math.floor(Date.now() / 1000),
-      utc_offset: "0.0"
-    },
-    current: {
-      observation_time: new Date().toLocaleTimeString('en-US', { hour12: false }),
-      temperature: Math.floor(Math.random() * 15) + 20,
-      weather_code: 116,
-      weather_icons: ["https://assets.weatherstack.com/images/wsymbols01_png_64/wsymbol_0002_sunny_intervals.png"],
-      weather_descriptions: ["Ensolarado"],
-      wind_speed: Math.floor(Math.random() * 20) + 5,
-      wind_degree: Math.floor(Math.random() * 360),
-      wind_dir: "N",
-      pressure: Math.floor(Math.random() * 50) + 1000,
-      humidity: Math.floor(Math.random() * 40) + 40,
-      cloudcover: Math.floor(Math.random() * 100),
-      feelslike: Math.floor(Math.random() * 15) + 22,
-      uv_index: Math.floor(Math.random() * 11),
-      visibility: Math.floor(Math.random() * 10) + 10,
-      is_day: "yes"
-    }
-  };
+ 
+export const isCurrencySupported = async (currency) => {
+  try {
+    const supportedCurrencies = await getSupportedCurrencies();
+    return supportedCurrencies.includes(currency.toUpperCase());
+  } catch (error) {
+    console.error('Erro ao validar moeda:', error);
+    return false;
+  }
 };
