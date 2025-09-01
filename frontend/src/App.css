@@ -6,7 +6,7 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #a4a4a4 100%);
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -22,7 +22,7 @@ body {
 
 h1 {
   text-align: center;
-  color: white;
+  color: rgb(0, 0, 0);
   margin-bottom: 30px;
   font-size: 3em;
   font-weight: 300;
@@ -89,29 +89,25 @@ h1 {
 }
 
 .swap-btn {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   border: none;
   border-radius: 50%;
-  background: linear-gradient(135deg, #f093fb, #f5576c);
-  color: white;
-  font-size: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: transparent;
+  font-size: 0;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
-}
-
-.swap-btn:hover:not(:disabled) {
-  transform: rotate(180deg) scale(1.1);
-  box-shadow: 0 6px 20px rgba(240, 147, 251, 0.6);
-}
-
-.swap-btn:disabled {
-  background: #dee2e6;
-  color: #6c757d;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  position: relative;
+  background-image: url('/setas.png');
+  background-size: 30px 30px;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 .search-section {
@@ -443,6 +439,8 @@ h1 {
   50% { transform: translate(-50%, -50%) rotate(180deg); }
 }
 
+
+
 .info-section {
   background: rgba(255, 255, 255, 0.9);
   padding: 25px;
@@ -490,12 +488,14 @@ h1 {
   }
   
   .swap-btn {
+    width: 55px;
+    height: 55px;
+    font-size: 0;
     transform: rotate(90deg);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.25);
+    background-size: 25px 25px;
   }
-  
-  .swap-btn:hover:not(:disabled) {
-    transform: rotate(270deg) scale(1.1);
-  }
+
   
   .button-section {
     flex-direction: column;
