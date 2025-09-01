@@ -110,22 +110,6 @@ h1 {
   background-position: center;
 }
 
-.swap-btn:active:not(:disabled) {
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-.swap-btn:disabled {
-  background: linear-gradient(135deg, #dee2e6, #adb5bd);
-  color: #6c757d;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-color: rgba(255, 255, 255, 0.1);
-  opacity: 0.6;
-}
-
-
-
 .search-section {
   margin-bottom: 8px;
 }

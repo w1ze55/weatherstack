@@ -114,7 +114,7 @@ function App() {
   }
   return (
     <div className="container">
-      <h1>💰 Conversor de Moedas</h1>
+      <h1>Conversor de Moedas</h1>
       <div className="input-container">
         <div className="amount-section">
           <h3>Valor a Converter</h3>
